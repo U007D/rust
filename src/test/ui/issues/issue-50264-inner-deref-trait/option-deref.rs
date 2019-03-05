@@ -1,6 +1,10 @@
 #![feature(inner_deref)]
 
+// i32 does not implement `Deref`, and so `Option<i32>::Some(T)` should not
+// have `as_ref_deref()/as_mut_deref_mut()` methods defined.
 fn main() {
-    let _result = &Some(42).deref();
-//~^ ERROR no method named `deref` found for type `std::option::Option<{integer}>`
+    let _ = Some(41).as_ref_deref();
+//~^ ERROR no method named `as_ref_deref` found
+    let _ = Some(41).as_mut_deref_mut();
+//~^ ERROR no method named `as_mut_deref_mut` found
 }
