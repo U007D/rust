@@ -136,7 +136,7 @@
 #![stable(feature = "rust1", since = "1.0.0")]
 
 use iter::{FromIterator, FusedIterator, TrustedLen};
-use {hint, mem, ops::{self, Deref}};
+use {hint, mem, ops::{self, Deref, DerefMut}};
 use pin::Pin;
 
 // Note that this is not a lang item per se, but it has a hidden dependency on
@@ -995,12 +995,26 @@ impl<T: Default> Option<T> {
 
 #[unstable(feature = "inner_deref", reason = "newly added", issue = "50264")]
 impl<T: Deref> Option<T> {
-    /// Converts from `&Option<T>` to `Option<&T::Target>`.
+    /// Converts from `Option<T>` to `Option<&<T as Deref>::Target>`.
+    /// For example, `Some(String)` -> `Some(&str)`.
     ///
-    /// Leaves the original Option in-place, creating a new one with a reference
-    /// to the original one, additionally coercing the contents via `Deref`.
-    pub fn deref(&self) -> Option<&T::Target> {
+    /// Produces a new `Option`, containing a reference to the original,
+    /// additionally coercing the contents of the `Option` via `Deref`.
+    pub fn as_ref_deref(&self) -> Option<&T::Target> {
         self.as_ref().map(|t| t.deref())
+    }
+}
+
+#[unstable(feature = "inner_deref", reason = "newly added", issue = "50264")]
+impl<T: DerefMut> Option<T> {
+    /// Converts from `Option<T>` to `Option<&mut <T as DerefMut>::Target>`.
+    /// For example, `Some(String)` -> `Some(&mut str)`.
+    ///
+    /// Produces a new `Option`, containing a mutable reference to the
+    /// original, additionally coercing the contents of the `Option` via
+    /// `DerefMut`.
+    pub fn as_mut_deref_mut(&mut self) -> Option<&mut T::Target> {
+        self.as_mut().map(|t| t.deref_mut())
     }
 }
 

@@ -232,7 +232,7 @@
 
 use fmt;
 use iter::{FromIterator, FusedIterator, TrustedLen};
-use ops::{self, Deref};
+use ops::{self, Deref, DerefMut};
 
 /// `Result` is a type that represents either success ([`Ok`]) or failure ([`Err`]).
 ///
@@ -927,39 +927,81 @@ impl<T: Default, E> Result<T, E> {
 
 #[unstable(feature = "inner_deref", reason = "newly added", issue = "50264")]
 impl<T: Deref, E> Result<T, E> {
-    /// Converts from `&Result<T, E>` to `Result<&T::Target, &E>`.
+    /// Converts from `Result<T, E>` to `Result<&T::Target, &E>`.
+    /// For example, `Ok(String)` -> `Ok(&str)`.
     ///
-    /// Leaves the original Result in-place, creating a new one with a reference
-    /// to the original one, additionally coercing the `Ok` arm of the Result via
-    /// `Deref`.
-    pub fn deref_ok(&self) -> Result<&T::Target, &E> {
+    /// Produces a new `Result`, containing a reference to the original,
+    /// additionally coercing the `Ok` arm of the `Result` via `Deref`.
+    pub fn as_ref_deref_ok(&self) -> Result<&<T as Deref>::Target, &E> {
         self.as_ref().map(|t| t.deref())
     }
 }
 
 #[unstable(feature = "inner_deref", reason = "newly added", issue = "50264")]
-impl<T, E: Deref> Result<T, E> {
-    /// Converts from `&Result<T, E>` to `Result<&T, &E::Target>`.
+impl<T: DerefMut + Deref, E> Result<T, E> {
+    /// Converts from `Result<T, E>` to `Result<&mut <T as Deref>::Target, &mut E>`.
+    /// For example, `Ok(String)` -> `Ok(&mut str)`.
     ///
-    /// Leaves the original Result in-place, creating a new one with a reference
-    /// to the original one, additionally coercing the `Err` arm of the Result via
-    /// `Deref`.
-    pub fn deref_err(&self) -> Result<&T, &E::Target>
+    /// Produces a new `Result`, containing a mutable reference to the
+    /// original, additionally coercing the `Ok` arm of the `Result` via
+    /// `DerefMut`.
+    pub fn as_mut_deref_mut_ok(&mut self) -> Result<&mut <T as Deref>::Target, &mut E> {
+        self.as_mut().map(|t| t.deref_mut())
+    }
+}
+
+#[unstable(feature = "inner_deref", reason = "newly added", issue = "50264")]
+impl<T, E: Deref> Result<T, E> {
+    /// Converts from `Result<T, E>` to `Result<&T, &E::Target>`.
+    /// For example, `Err(Vec::<i32>)` -> `Err(&[i32])`.
+    ///
+    /// Produces a new `Result`, containing a reference to the original,
+    /// additionally coercing the `Err` arm of the `Result` via `Deref`.
+    pub fn as_ref_deref_err(&self) -> Result<&T, &<E as Deref>::Target>
     {
         self.as_ref().map_err(|e| e.deref())
     }
 }
 
 #[unstable(feature = "inner_deref", reason = "newly added", issue = "50264")]
-impl<T: Deref, E: Deref> Result<T, E> {
-    /// Converts from `&Result<T, E>` to `Result<&T::Target, &E::Target>`.
+impl<T, E: DerefMut + Deref> Result<T, E> {
+    /// Converts from `Result<T, E>` to `Result<&mut T, &mut <E as Deref>::Target>`.
+    /// For example, `Err(Vec::<i32>)` -> `Err(&mut [i32])`.
     ///
-    /// Leaves the original Result in-place, creating a new one with a reference
-    /// to the original one, additionally coercing both the `Ok` and `Err` arms
-    /// of the Result via `Deref`.
-    pub fn deref(&self) -> Result<&T::Target, &E::Target>
+    /// Produces a new `Result`, containing a mutable reference to the
+    /// original, additionally coercing the `Err` arm of the `Result` via
+    /// `DerefMut`.
+    pub fn as_mut_deref_mut_err(&mut self) -> Result<&mut T, &mut <E as Deref>::Target> {
+        self.as_mut().map_err(|e| e.deref_mut())
+    }
+}
+
+#[unstable(feature = "inner_deref", reason = "newly added", issue = "50264")]
+impl<T: Deref, E: Deref> Result<T, E> {
+    /// Converts from `Result<T, E>` to `Result<&T::Target, &E::Target>`.
+    /// For example, `Ok(String)` -> `Ok(&string)`.
+    ///
+    /// Produces a new `Result`, containing a reference to the original,
+    /// additionally coercing both the `Ok` and `Err` arms of the `Result` via
+    /// `Deref`.
+    pub fn as_ref_deref(&self) -> Result<&<T as Deref>::Target, &<E as Deref>::Target>
     {
         self.as_ref().map(|t| t.deref()).map_err(|e| e.deref())
+    }
+}
+
+#[unstable(feature = "inner_deref", reason = "newly added", issue = "50264")]
+impl<T: DerefMut + Deref, E: DerefMut + Deref> Result<T, E> {
+    /// Converts from `Result<T, E>` to
+    /// `Result<&mut <T as Deref>::Target, &mut <E as Deref>::Target>`.
+    /// For example, `Ok(String)` -> `Ok(&mut str)`.
+    ///
+    /// Produces a new `Result`, containing a mutable reference to the
+    /// original, additionally coercing both the `Ok` and the `Err` arms of the
+    /// `Result` via `DerefMut`.
+    pub fn as_mut_deref_mut(&mut self) -> Result<&mut <T as Deref>::Target,
+                                                 &mut <E as Deref>::Target> {
+        self.as_mut().map(|t| t.deref_mut()).map_err(|e| e.deref_mut())
     }
 }
 
