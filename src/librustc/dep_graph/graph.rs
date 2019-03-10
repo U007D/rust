@@ -675,8 +675,6 @@ impl DepGraph {
                         }
                     } else {
                         match dep_dep_node.kind {
-                            DepKind::Hir |
-                            DepKind::HirBody |
                             DepKind::CrateMetadata => {
                                 if dep_dep_node.extract_def_id(tcx).is_none() {
                                     // If the node does not exist anymore, we

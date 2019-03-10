@@ -99,6 +99,8 @@ pub use self::on_disk_cache::OnDiskCache;
 // as they will raise an fatal error on query cycles instead.
 define_queries! { <'tcx>
     Other {
+        [no_hash] fn hir_map: HirMap(CrateNum) -> &'tcx hir::map::Map<'tcx>,
+
         /// Run analysis passes on the crate
         [] fn analysis: Analysis(CrateNum) -> Result<(), ErrorReported>,
 

@@ -1187,13 +1187,19 @@ pub fn force_from_dep_node<'a, 'gcx, 'lcx>(tcx: TyCtxt<'a, 'gcx, 'lcx>,
     // FIXME(#45015): We should try move this boilerplate code into a macro
     //                somehow.
     match dep_node.kind {
+        // Created by the Hir map query
+        DepKind::AllLocalTraitImpls |
+        DepKind::Krate => {
+            force!(hir_map, LOCAL_CRATE);
+        }
+        DepKind::HirBody |
+        DepKind::Hir => {
+            force!(hir_map, krate!());
+        }
+
         // These are inputs that are expected to be pre-allocated and that
         // should therefore always be red or green already
-        DepKind::AllLocalTraitImpls |
-        DepKind::Krate |
         DepKind::CrateMetadata |
-        DepKind::HirBody |
-        DepKind::Hir |
 
         // This are anonymous nodes
         DepKind::TraitSelect |
@@ -1363,6 +1369,7 @@ pub fn force_from_dep_node<'a, 'gcx, 'lcx>(tcx: TyCtxt<'a, 'gcx, 'lcx>,
         DepKind::OriginalCrateName => { force!(original_crate_name, krate!()); }
         DepKind::ExtraFileName => { force!(extra_filename, krate!()); }
         DepKind::Analysis => { force!(analysis, krate!()); }
+        DepKind::HirMap => { force!(hir_map, krate!()); }
 
         DepKind::AllTraitImplementations => {
             force!(all_trait_implementations, krate!());
