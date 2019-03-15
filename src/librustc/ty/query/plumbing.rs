@@ -415,7 +415,7 @@ impl<'a, 'gcx, 'tcx> TyCtxt<'a, 'gcx, 'tcx> {
             return result;
         }
 
-        if !dep_node.kind.is_input() {
+        if !dep_node.kind.is_eval_always() {
             // The diagnostics for this query will be
             // promoted to the current session during
             // try_mark_green(), so we can ignore them here.
@@ -602,9 +602,13 @@ impl<'a, 'gcx, 'tcx> TyCtxt<'a, 'gcx, 'tcx> {
     pub(super) fn ensure_query<Q: QueryDescription<'gcx>>(self, key: Q::Key) -> () {
         let dep_node = Q::to_dep_node(self, &key);
 
-        // Ensuring an "input" or anonymous query makes no sense
+        if dep_node.kind.is_eval_always() {
+            let _ = self.get_query::<Q>(DUMMY_SP, key);
+            return;
+        }
+
+        // Ensuring an anonymous query makes no sense
         assert!(!dep_node.kind.is_anon());
-        assert!(!dep_node.kind.is_input());
         if self.dep_graph.try_mark_green_and_read(self, &dep_node).is_none() {
             // A None return from `try_mark_green_and_read` means that this is either
             // a new dep node or that the dep node has already been marked red.
@@ -1183,13 +1187,19 @@ pub fn force_from_dep_node<'a, 'gcx, 'lcx>(tcx: TyCtxt<'a, 'gcx, 'lcx>,
     // FIXME(#45015): We should try move this boilerplate code into a macro
     //                somehow.
     match dep_node.kind {
+        // Created by the Hir map query
+        DepKind::AllLocalTraitImpls |
+        DepKind::Krate => {
+            force!(hir_map, LOCAL_CRATE);
+        }
+        DepKind::HirBody |
+        DepKind::Hir => {
+            force!(hir_map, krate!());
+        }
+
         // These are inputs that are expected to be pre-allocated and that
         // should therefore always be red or green already
-        DepKind::AllLocalTraitImpls |
-        DepKind::Krate |
         DepKind::CrateMetadata |
-        DepKind::HirBody |
-        DepKind::Hir |
 
         // This are anonymous nodes
         DepKind::TraitSelect |
@@ -1359,6 +1369,7 @@ pub fn force_from_dep_node<'a, 'gcx, 'lcx>(tcx: TyCtxt<'a, 'gcx, 'lcx>,
         DepKind::OriginalCrateName => { force!(original_crate_name, krate!()); }
         DepKind::ExtraFileName => { force!(extra_filename, krate!()); }
         DepKind::Analysis => { force!(analysis, krate!()); }
+        DepKind::HirMap => { force!(hir_map, krate!()); }
 
         DepKind::AllTraitImplementations => {
             force!(all_trait_implementations, krate!());
