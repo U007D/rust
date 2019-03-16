@@ -5,6 +5,4 @@
 fn main() {
     let _ = Some(41).as_ref_deref();
 //~^ ERROR no method named `as_ref_deref` found
-    let _ = Some(41).as_mut_deref_mut();
-//~^ ERROR no method named `as_mut_deref_mut` found
 }
